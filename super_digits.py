@@ -1,111 +1,106 @@
-import numpy as np
-import sys
-from collections import namedtuple
-from matplotlib import pyplot as plt
+import numpy 
 
-def yhat(X, W):
-    Z = W.T.dot(X)
-    return softmax(Z).T
+class NN():
+    def __init__(self, learning_rate, regularization_strength, hidden_units):
+        self.learning_rate = learning_rate
+        self.hidden_units = hidden_units
+        self.l2_strength = regularization_strength
 
-def softmax(Z):
-    exp = np.exp(Z)
-    total = np.sum(exp, axis=0)
-    return exp / total
+    def f_ce(y_hat, y):
+        return -1 * np.sum(y * np.log(y_hat))
 
-def gradient(X, Y, W):
-    n = X.shape[1]
-    return X.dot(yhat(X, W) - Y) / n
+    def f_pc(y_hat, y):
+        pc_correct = np.mean(np.argmax(y_hat, axis=1) == np.argmax(y, axis=1))
+        return pc_correct
 
-def cross_entropy_loss(y, yhat):
-    loss = 0
-    yhat_log = np.log(yhat.T)
-    for i in range(len(y)):
-        loss -= y[i, :].dot(yhat_log[:, i]) 
-    return loss
+    def fit(self, x, y):
+        #hyper parameters
 
-def toClassIndices(probabilities):
-    return np.argmax(probabilities, axis=1)
+        tolerance = .0000001
+        batch_size = 60
+        target_epochs = 35
 
-def accuracy(expected_labels, predicted_labels):
-    return np.mean(toClassIndices(expected_labels) == toClassIndices(predicted_labels))
+        #shuffle the dataset and Transpose X
+        x, y = shuffleDataset(x, y)
+        W = .01 * np.random.rand(X.shape[0], y.shape[1])
 
-def digit_classifier(training_images, training_labels, epochs=100, batch_size=100):
-    m = training_images.shape[1]
-    c = training_labels.shape[1]
-    W = 0.001 * np.random.rand(m, c)
+        is_training = True
+        current_epochs = 0
 
-    indices = np.arange(len(training_images))
-    np.random.shuffle(indices)
+        self.w_1 = rand_weights(self.hidden_units, x.rows)
+        self.w_2 = rand_weights(y.rows, self.hidden_units)
+        self.b_1 = .01 # TODO vectorize
+        self.b_2 = .01 # TODO vectorize
 
-    training_images = training_images[indices, :]
-    training_labels = training_labels[indices, :]
+        while is_training and current_epochs < target_epochs:
+            for i in xrange(0, x.shape[1], batch_size):
+                x_batch = x[:,i:i+batch_size]
+                y_batch = y[i:i+batch_size]
 
-    training_set_size = training_images.shape[0]
-    learning_rate = 0.8
-    anneal_rate = 15000
-    decay_rate = 0.95
-    rounds = 0
+                y_hat, h_1, z_1 = forward_prop(x_batch)
+                grad_w1, grad_w2, grad_b1, grad_b2 = back_prop(h_1, z_1, x_batch, y_batch, y_hat)
 
-    for epoch in range(epochs):
-        for batch_start in range(0, training_set_size, batch_size):
-            batch_end = batch_start + batch_size
-            X = training_images[batch_start:batch_end].T
-            Y = training_labels[batch_start:batch_end]
-            W = W - learning_rate * gradient(X, Y, W)
-            rounds += 1
-            if rounds % anneal_rate == 0:
-                learning_rate *= decay_rate
+                w_1 -= self.learning_rate * grad_w1 
+                w_2 -= self.learning_rate * grad_w2
+                b_1 -= self.learning_rate * grad_b1
+                b_2 -= self.learning_rate * grad_b2
+            
+            current_epochs+=1
+            epoch_yhat = yhat_softmax(X, W)
+            epoch_cost = f_ce(epoch_yhat, y)
+            epoch_accuracy = f_pc(epoch_yhat, y) * 100
+
+            if abs(epoch_cost) < tolerance:
+                    is_training = False
+
+            print("Epoch {0}: {1:.2f}% accuracy, {2} cost".format(current_epochs, epoch_accuracy, epoch_cost))
         
-        print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, epochs, cross_entropy_loss(Y, yhat(X, W))))
-    
-    def predict(images):
-        return yhat(images.T, W)
-    
-    Classifier = namedtuple("Classifier", ["W", "predict"])
-    return Classifier(W, predict)
+        def predict(faces):
+            return forward_prop(x_batch)[0] # first element in tuple is y_hat
 
-def visualize(images, labels, rows = 5, cols = 20):
-    n = rows * cols
-    images = images[:n]
-    labels = labels[:n, :]
+        Classifier =  namedtuple("nn", ["W", "predict"])
+        return Classifier(W, predict)
 
-    class_indices = toClassIndices(labels)
-    class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-    images = np.reshape(images, (images.shape[0], 28, 28))
+    def rand_weights(rows, cols):
+        return np.random.randn(rows, cols)
 
-    for i in range(rows * cols):
-        plt.subplot(rows, cols, i + 1)
-        plt.title(class_names[class_indices[i]])
-        plt.imshow(images[i], cmap='gray')
-        plt.axis('off')
-        
-    plt.show()
+    def forward_prop(x):
+        # requires
+        z_1 = self.w_1 * x + self.b_1
+        h_1 = relu(z_1)
+        z_2 = self.w_2 * h_1 + self.b_2
+        y_hat = softmax(z_2)
 
-def recognize_digit(training_images, training_labels, testing_images, testing_labels):
-    print("Start training...")
-    print()
-    
-    epochs = int(sys.argv[1])
-    clf = digit_classifier(training_images, training_labels, epochs=epochs)
-    predicted_labels = clf.predict(testing_images)
+     return y_hat, h_1, z_1
 
-    print()
-    print("Cross Entropy Loss = %.2f" % (cross_entropy_loss(testing_labels, predicted_labels)))
-    print("Accuracy: %f" % accuracy(testing_labels, predicted_labels))
+    def relu(input):
+        # TODO implement relu
 
-    visualize(testing_images, predicted_labels)
+    def backward_prop(h_1, z_1, x, y, y_hat):
+        g = ((y - y_hat).T.dot(w_2) * relu_prime(z1.T)).T
+
+        grad_w1 = g * x.T + self.l2_strength * self.w_1
+        grad_w2 = (y_hat - y) * h_1.T + self.l2_strength * self.w_2
+        grad_b1 = g
+        grad_b2 = y_hat - y
+
+        return grad_w1, grad_w2, grad_b1, grad_b2
 
 def main():
-    training_images = np.load("mnist_train_images.npy")
-    training_labels = np.load("mnist_train_labels.npy")
-    testing_images = np.load("mnist_test_images.npy")
-    testing_labels = np.load("mnist_test_labels.npy")
+    learning_rate = .5
+    hidden_units = 5
+    regularization_strength = .01
 
-    recognize_digit(training_images, training_labels, testing_images, testing_labels)
+    trainImages, trainLabels = loadData("training")
+
+    nn_classifier = NN(learning_rate, hidden_units)
+    nn_classifier.fit(trainImages, trainLabels)
+
+def loadData (which):
+    faces = np.load("{}ingFaces.npy".format(which))
+    faces = faces.reshape(-1, 24, 24)  # Reshape from 576 to 24x24
+    labels = np.load("{}ingLabels.npy".format(which))
+    return faces, labels
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 digit_recognizer.py [number of epochs]")
-        print("Eg: python3 digit_recognizer.py 20")
-        exit()
     main()
