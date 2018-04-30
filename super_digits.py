@@ -16,82 +16,98 @@ class NeuralNetworkClassifier():
         self._l_2_alpha_2 = l_2_alpha_2
 
     def fit(self, X_train, Y_train):
-        pass
-        # m = training_images.shape[1]
-        # c = training_labels.shape[1]
-        self._W_1 = 0.001 * np.random.rand(m, c)
-        self._W_2 = 0.001 * np.random.rand(m, c)
-        self._b_1 = 0.001 * np.random.rand(m, c)
-        self._b_2 = 0.001 * np.random.rand(m, c)
+        num_input_dimensions = X_train.shape[1]
+        num_classes = Y_train.shape[1]
+        training_set_size = X_train.shape[0]
 
-        # indices = np.arange(len(training_images))
-        # np.random.shuffle(indices)
-
-        # training_images = training_images[indices, :]
-        # training_labels = training_labels[indices, :]
-
-        # training_set_size = training_images.shape[0]
-        # learning_rate = 0.8
-        # anneal_rate = 15000
-        # decay_rate = 0.95
-        # rounds = 0
+        self._W_1 = np.random.randn(self._hidden_units, num_input_dimensions)
+        self._W_2 = np.random.randn(num_classes, self._hidden_units)
+        self._b_1 = 0.01 * np.ones((self._hidden_units, 1))
+        self._b_2 = 0.01 * np.ones((num_classes, 1))
 
         for epoch in range(self._epochs):
             for batch_start in range(0, training_set_size, self._batch_size):
-                batch_end = batch_start + batch_size
-                X = training_images[batch_start:batch_end].T
-                Y = training_labels[batch_start:batch_end]
-                # Compute Gradients
+                batch_end = batch_start + self._batch_size
+                X_batch = X_train[batch_start:batch_end]
+                Y_batch = Y_train[batch_start:batch_end]
 
-                x = 
-                y = 
+                num_examples = X_batch.shape[0]
 
-                z_1, h1, y_hat = self._forward_propagation(x)
-                self._backward_propagation(x, y, z_1, h_1, y_hat)
+                W_1_prime_total = 0
+                W_2_prime_total = 0
+                b_1_prime_total = 0
+                b_2_prime_total = 0
+
+                for i in range(num_examples):
+                    x = np.vstack(X_batch[i, :])
+                    y = np.vstack(Y_batch[i, :])
+
+                    z_1, h_1, y_hat = self._forward_propagation(x)
+                    W_1_prime, W_2_prime, b_1_prime, b_2_prime = self._backward_propagation(x, y, z_1, h_1, y_hat)
+
+                    W_1_prime_total += W_1_prime
+                    W_2_prime_total += W_2_prime
+                    b_1_prime_total += b_1_prime
+                    b_2_prime_total += b_2_prime
             
-                rounds += 1
-                if rounds % anneal_rate == 0:
-                    learning_rate *= decay_rate
+                self._W_1 = self._W_1 - self._learning_rate * W_1_prime_total
+                self._W_2 = self._W_2 - self._learning_rate * W_2_prime_total
+                self._b_1 = self._b_1 - self._learning_rate * b_1_prime_total
+                self._b_2 = self._b_2 - self._learning_rate * b_2_prime_total
             
-            print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, epochs, cross_entropy_loss(Y, yhat(X, W))))
+            print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, self._epochs,self._cross_entropy_loss(Y_batch, self.yhats(X_batch, num_classes))))
+
+    def yhats(self, X, num_classes):
+        num_examples = X.shape[0]
+        Y_hat = np.zeros((num_examples, num_classes))
+        print(Y_hat.shape)
+        for i in range(num_examples):
+            x = np.vstack(X[i, :])
+            _, _, y_hat = self._forward_propagation(x)
+            Y_hat[i, :] = y_hat[:, 0]
+        return Y_hat 
         
     def _forward_propagation(self, x):
         z_1 = self._W_1.dot(x) + self._b_1
+
+        # print("_forward_propagation W_1=", self._W_1.shape)
+        # print("_forward_propagation b_1=", self._b_1.shape)
+        # print("_forward_propagation x=", x.shape)
+        # print("_forward_propagation z=", z_1.shape)
         h_1 = self._relu(z_1)
+
+        # print("_forward_propagation h_1=", h_1.shape)
         z_2 = self._W_2.dot(h_1) + self._b_2
+
+        # print("_forward_propagation z_2=", z_2.shape)
         y_hat = self._softmax(z_2)
+
+        # print("_forward_propagation y_hat=", y_hat.shape)
         return z_1, h_1, y_hat
     
     def _backward_propagation(self, x, y, z_1, h_1, y_hat):
         df_dy = y_hat - y
-        g = self._g(self, df_dy, self._W_2, z_1) 
+        g = self._g(df_dy, self._W_2, z_1)
 
-        self._W_1 = self._W_1 - self._learning_rate * self._W_1_prime(x, g, self._W_1, self._l_2_alpha_1, self._l_1_beta_1)
-        self._W_2 = self._W_2 - self._learning_rate * self._W_2_prime(df_dy, h_1, self._W_2, self._l_2_alpha_2, self._l_1_beta_2)
+        W_1_prime = self._W_1_prime(x, g, self._W_1, self._l_2_alpha_1, self._l_1_beta_1)
+        W_2_prime = self._W_2_prime(df_dy, h_1, self._W_2, self._l_2_alpha_2, self._l_1_beta_2)
+        b_1_prime = self._learning_rate * self._b_1_prime(g)
+        b_2_prime = self._learning_rate * self._b_2_prime(df_dy)
 
-        self._b_1 = self._b_1 - self._learning_rate * self._b_1_prime(g)
-        self._b_2 = self._b_2 - self._learning_rate * self._b_2_prime(df_dy)
+        return W_1_prime, W_2_prime, b_1_prime, b_2_prime
 
     def predict(self, X):
-        pass
+        pass 
     
     def _relu(self, x):
-        return 0 if x <= 0 else x
+        return np.maximum(x, 0)
 
     def _relu_prime(self, x):
-        return 0 if x <= 0 else 1
+        y = np.zeros((x.shape[0], x.shape[1]))
+        y[x > 0] = 1.0
+        return y
 
-    def _z_1(self, x, W_1, b_1):
-        return W_1.T.dot(x) + b_1
-    
-    def _h_1(self, z_1):
-
-
-    def _yhat(X, W):
-        Z = W.T.dot(X)
-        return softmax(Z).T
-
-    def _softmax(Z):
+    def _softmax(self, Z):
         exp = np.exp(Z)
         total = np.sum(exp, axis=0)
         return exp / total
@@ -102,21 +118,30 @@ class NeuralNetworkClassifier():
     def _W_2_prime(self, df_dy, h_1, W_2, alpha_2, beta_2):
         return df_dy.dot(h_1.T) + alpha_2 * W_2 + beta_2 * np.sign(W_2) 
     
-    def _b2_prime(self, df_dy):
+    def _b_2_prime(self, df_dy):
         return df_dy
 
     def _W_1_prime(self, x, g, W_1, alpha_1, beta_1):
         return g.dot(x.T) + alpha_1 * W_1 + beta_1 * np.sign(W_1) 
 
-    def _b1_prime(self, g):
+    def _b_1_prime(self, g):
         return g
 
-    def _cross_entropy_loss(y, yhat):
+    def _l_1_loss(self, W):
+        return np.sum(np.absolute(W))
+    
+    def _l_2_loss(self, W):
+        return 0.5 * np.linalg.norm(W)
+
+    def _cross_entropy_loss(self, y, yhat):
         loss = 0
         yhat_log = np.log(yhat.T)
         for i in range(len(y)):
-            loss -= y[i, :].dot(yhat_log[:, i]) 
-        return loss
+            loss -= y[i, :].dot(yhat_log[:, i])
+
+        l_1_regularization = self._l_1_beta_1 * self._l_1_loss(self._W_1) + self._l_1_beta_2 * self._l_1_loss(self._W_2)
+        l_2_regularization = self._l_2_alpha_1 * self._l_2_loss(self._W_1) + self._l_2_alpha_2 * self._l_2_loss(self._W_2)
+        return loss + l_1_regularization + l_2_regularization
 
     def _toClassIndices(self, probabilities):
         return np.argmax(probabilities, axis=1)
@@ -131,7 +156,7 @@ def recognize_digit(training_images, training_labels, validation_images, validat
     print("Start training...")
     print()
 
-    clf = NeuralNetworkClassifier(hidden_units=30, learning_rate=0.001, batch_size=16, epochs=30, l1_beta=0.5, l2_alpha=0.4)
+    clf = NeuralNetworkClassifier(hidden_units=30, learning_rate=0.001, batch_size=16, epochs=30, l_1_beta_1=0.6, l_1_beta_2=0.5, l_2_alpha_1=0.4, l_2_alpha_2=0.3)
     clf.fit(training_images, training_labels)
     predicted_labels = clf.predict(testing_images)
 
@@ -147,7 +172,7 @@ def main():
     testing_images = np.load("mnist_test_images.npy")
     testing_labels = np.load("mnist_test_labels.npy")
 
-    recognize_digit(training_images, training_labels, validation_images, validation_labels, testing_images, testing_labels)
+    recognize_digit(training_images[0:160, :], training_labels[0:160, :], validation_images, validation_labels, testing_images, testing_labels)
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
