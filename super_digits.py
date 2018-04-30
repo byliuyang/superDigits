@@ -150,27 +150,87 @@ class NeuralNetworkClassifier():
     def score(self, expected_labels, predicted_labels):
         return np.mean(self._toClassIndices(expected_labels) == self._toClassIndices(predicted_labels))
 
-def recognize_digit(training_images, training_labels, validation_images, validation_labels, testing_images, testing_labels):
+def describe_hyperparameters(hyperparameters):
+     return "\nHidden Units: {0} Learning Rate: {1} Minibatch Size: {2} Epochs: {3} L1 Strength: {4} L2 Strength: {5}".format(
+                hyperparameters[0], hyperparameters[1], hyperparameters[2], hyperparameters[3], hyperparameters[4], hyperparameters[5])
+
+
+def findBestHyperparameters(training_images, training_labels, validation_images, validation_labels):
     print("Start training...")
     print()
 
-    clf = NeuralNetworkClassifier(hidden_units=20, learning_rate=0.007, batch_size=25, epochs=5, l_1_beta_1=0.0, l_1_beta_2=0.0, l_2_alpha_1=0.001, l_2_alpha_2=0.001)
-    clf.fit(training_images, training_labels)
-    predicted_labels = clf.predict(testing_images)
+    all_hidden_units = [20, 20, 30, 30, 40, 40, 50, 50, 60, 30]
+    all_learning_rates = [0.0001, 0.001, 0.01, 0.01, 0.01, 0.02, 0.02, 0.1, 0.2, 0.007]
+    all_minibatch_sizes = [2, 5, 10, 10, 20, 20, 100, 50, 50, 25]
+    all_num_epochs = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+    all_l1_strengths = [0.0, 0.0, 0, 0.01, 0.0, 0.001, 0.01, 0.02, 0.01, 0.001]
+    all_l2_strengths = [0.0, 0.01, 0.001, 0.0, 0.01, 0.001, 0.01, 0.02, 0.01, 0.001]
 
-    print()
-    print("Cross Entropy Loss = %.2f" % (clf.loss(testing_labels, predicted_labels)))
-    print("Accuracy: %f" % clf.score(testing_labels, predicted_labels))
+    slice_start = 0
+    slice_size = 5
+
+    best_accuracy = 0
+    best_hyperparamters = [] 
+
+    for i in range(slice_size):
+        hyperparameters = (all_hidden_units[slice_start+i], 
+                            all_learning_rates[slice_start+i],
+                            all_minibatch_sizes[slice_start+i],
+                            all_num_epochs[slice_start+i],
+                            all_l1_strengths[slice_start+i],
+                            all_l2_strengths[slice_start+i])
+
+        print(describe_hyperparameters(hyperparameters))
+
+        clf = NeuralNetworkClassifier(
+                        hidden_units = hyperparameters[0],
+                        learning_rate = hyperparameters[1], 
+                        batch_size = hyperparameters[2], 
+                        epochs = hyperparameters[3], 
+                        l_1_beta_1 = hyperparameters[4], 
+                        l_1_beta_2 = hyperparameters[4], 
+                        l_2_alpha_1 = hyperparameters[5], 
+                        l_2_alpha_2 = hyperparameters[5])
+
+        clf.fit(training_images, training_labels)
+
+        predicted_labels = clf.predict(validation_images)
+
+        accuracy = clf.score(validation_labels, predicted_labels)
+
+        print("Accuracy: %f" % accuracy)
+        print("Cross Entropy Loss = %.2f" % (clf.loss(validation_labels, predicted_labels)))
+
+        if(accuracy > best_accuracy):
+            best_accuracy = accuracy
+            best_hyperparamters = hyperparameters
+            print("Found new best hyperparameters.")
+        
+        print("\n")
+    
+    print(describe_hyperparameters(best_hyperparamters))
+    return best_hyperparamters
 
 def main():
     training_images = np.load("mnist_train_images.npy")
     training_labels = np.load("mnist_train_labels.npy")
-    validation_images = None #np.load("mnist_validation_images.npy")
-    validation_labels = None #np.load("mnist_validation_labels.npy")
     testing_images = np.load("mnist_test_images.npy")
     testing_labels = np.load("mnist_test_labels.npy")
 
-    recognize_digit(training_images[0:8000, :], training_labels[0:8000, :], validation_images, validation_labels, testing_images[0:8000, :], testing_labels[0:8000, :])
+    #TODO replace with validation set
+    validation_images = testing_images
+    validation_labels = testing_labels
+ 
+    parameters = findBestHyperparameters(training_images[0:16000, :], training_labels[0:16000, :], 
+                        validation_images, validation_labels)
+
+    clf = NeuralNetworkClassifier(hidden_units=parameters[0], 
+    learning_rate=parameters[1], 
+    batch_size=parameters[2], 
+    epochs=parameters[3], l_1_beta_1=parameters[4], l_1_beta_2=parameters[4], l_2_alpha_1=parameters[5], l_2_alpha_2=parameters[5])
+
+    clf.fit(training_images, training_labels)
+    predicted_labels = clf.predict(testing_images)
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
