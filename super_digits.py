@@ -21,7 +21,7 @@ class NeuralNetworkClassifier():
         training_set_size = X_train.shape[0]
 
         self._W_1 = 1 / np.sqrt(self._hidden_units) * np.random.randn(self._hidden_units, num_input_dimensions)
-        self._W_2 = 1 / np.sqrt(self._hidden_units) * np.random.randn(self._num_classes, self._hidden_units)
+        self._W_2 = 1 / np.sqrt(self._num_classes) * np.random.randn(self._num_classes, self._hidden_units)
         self._b_1 = 0.01 * np.ones((self._hidden_units, 1))
         self._b_2 = 0.01 * np.ones((self._num_classes, 1))
 
