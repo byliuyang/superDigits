@@ -164,13 +164,10 @@ def findBestHyperparameters(training_images, training_labels, validation_images,
     all_l1_strengths = [0.0, 0.0, 0, 0.01, 0.0, 0.001, 0.01, 0.02, 0.01, 0.001]
     all_l2_strengths = [0.0, 0.01, 0.001, 0.0, 0.01, 0.001, 0.01, 0.02, 0.01, 0.001]
 
-    slice_start = 0
-    slice_size = 5
-
     best_accuracy = 0
     best_hyperparamters = [] 
 
-    for i in range(slice_size):
+    for i in range(10):
         hyperparameters = (all_hidden_units[slice_start+i], 
                             all_learning_rates[slice_start+i],
                             all_minibatch_sizes[slice_start+i],
@@ -214,10 +211,8 @@ def main():
     training_labels = np.load("mnist_train_labels.npy")
     testing_images = np.load("mnist_test_images.npy")
     testing_labels = np.load("mnist_test_labels.npy")
-
-    #TODO replace with validation set
-    validation_images = testing_images
-    validation_labels = testing_labels
+    validation_images = np.load("mnist_validation_images.npy")
+    validation_labels = np.load("mnist_validation_labels.npy")
  
     parameters = findBestHyperparameters(training_images[0:16000, :], training_labels[0:16000, :], 
                         validation_images, validation_labels)
