@@ -56,7 +56,8 @@ class NeuralNetworkClassifier():
                 self._b_2 = self._b_2 - self._learning_rate * b_2_prime_total
             
             Y_hats = self.predict(X_batch)
-            print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, self._epochs,self._cross_entropy_loss(Y_batch, Y_hats)))
+            y_hat = self.predict(X_train)
+            print("Epoch %3d/%3d  Loss = %.2f Training Accuracy = %.2f" % (epoch + 1, self._epochs,self._cross_entropy_loss(Y_batch, Y_hats), self.score(Y_train, y_hat)))
 
     def _forward_propagation(self, x):
         z_1 = self._W_1.dot(x) + self._b_1
@@ -153,7 +154,7 @@ def recognize_digit(training_images, training_labels, validation_images, validat
     print("Start training...")
     print()
 
-    clf = NeuralNetworkClassifier(hidden_units=30, learning_rate=0.001, batch_size=16, epochs=30, l_1_beta_1=0.6, l_1_beta_2=0.5, l_2_alpha_1=0.4, l_2_alpha_2=0.3)
+    clf = NeuralNetworkClassifier(hidden_units=20, learning_rate=0.007, batch_size=25, epochs=5, l_1_beta_1=0.0, l_1_beta_2=0.0, l_2_alpha_1=0.001, l_2_alpha_2=0.001)
     clf.fit(training_images, training_labels)
     predicted_labels = clf.predict(testing_images)
 
@@ -164,12 +165,12 @@ def recognize_digit(training_images, training_labels, validation_images, validat
 def main():
     training_images = np.load("mnist_train_images.npy")
     training_labels = np.load("mnist_train_labels.npy")
-    validation_images = np.load("mnist_validation_images.npy")
-    validation_labels = np.load("mnist_validation_labels.npy")
+    validation_images = None #np.load("mnist_validation_images.npy")
+    validation_labels = None #np.load("mnist_validation_labels.npy")
     testing_images = np.load("mnist_test_images.npy")
     testing_labels = np.load("mnist_test_labels.npy")
 
-    recognize_digit(training_images[0:160, :], training_labels[0:160, :], validation_images, validation_labels, testing_images[0:160, :], testing_labels[0:160, :])
+    recognize_digit(training_images[0:8000, :], training_labels[0:8000, :], validation_images, validation_labels, testing_images[0:8000, :], testing_labels[0:8000, :])
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
