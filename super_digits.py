@@ -1,7 +1,5 @@
 import numpy as np
 import sys
-from collections import namedtuple
-from matplotlib import pyplot as plt
 
 
 class NeuralNetworkClassifier():
