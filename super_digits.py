@@ -17,13 +17,13 @@ class NeuralNetworkClassifier():
 
     def fit(self, X_train, Y_train):
         num_input_dimensions = X_train.shape[1]
-        num_classes = Y_train.shape[1]
+        self._num_classes = Y_train.shape[1]
         training_set_size = X_train.shape[0]
 
         self._W_1 = np.random.randn(self._hidden_units, num_input_dimensions)
-        self._W_2 = np.random.randn(num_classes, self._hidden_units)
+        self._W_2 = np.random.randn(self._num_classes, self._hidden_units)
         self._b_1 = 0.01 * np.ones((self._hidden_units, 1))
-        self._b_2 = 0.01 * np.ones((num_classes, 1))
+        self._b_2 = 0.01 * np.ones((self._num_classes, 1))
 
         for epoch in range(self._epochs):
             for batch_start in range(0, training_set_size, self._batch_size):
@@ -55,18 +55,9 @@ class NeuralNetworkClassifier():
                 self._b_1 = self._b_1 - self._learning_rate * b_1_prime_total
                 self._b_2 = self._b_2 - self._learning_rate * b_2_prime_total
             
-            print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, self._epochs,self._cross_entropy_loss(Y_batch, self.yhats(X_batch, num_classes))))
+            Y_hats = self.predict(X_batch)
+            print("Epoch %3d/%3d  Loss = %.2f" % (epoch + 1, self._epochs,self._cross_entropy_loss(Y_batch, Y_hats)))
 
-    def yhats(self, X, num_classes):
-        num_examples = X.shape[0]
-        Y_hat = np.zeros((num_examples, num_classes))
-        print(Y_hat.shape)
-        for i in range(num_examples):
-            x = np.vstack(X[i, :])
-            _, _, y_hat = self._forward_propagation(x)
-            Y_hat[i, :] = y_hat[:, 0]
-        return Y_hat 
-        
     def _forward_propagation(self, x):
         z_1 = self._W_1.dot(x) + self._b_1
 
@@ -97,7 +88,13 @@ class NeuralNetworkClassifier():
         return W_1_prime, W_2_prime, b_1_prime, b_2_prime
 
     def predict(self, X):
-        pass 
+        num_examples = X.shape[0]
+        Y_hat = np.zeros((num_examples, self._num_classes))
+        for i in range(num_examples):
+            x = np.vstack(X[i, :])
+            _, _, y_hat = self._forward_propagation(x)
+            Y_hat[i, :] = y_hat[:, 0]
+        return Y_hat
     
     def _relu(self, x):
         return np.maximum(x, 0)
@@ -172,7 +169,7 @@ def main():
     testing_images = np.load("mnist_test_images.npy")
     testing_labels = np.load("mnist_test_labels.npy")
 
-    recognize_digit(training_images[0:160, :], training_labels[0:160, :], validation_images, validation_labels, testing_images, testing_labels)
+    recognize_digit(training_images[0:160, :], training_labels[0:160, :], validation_images, validation_labels, testing_images[0:160, :], testing_labels[0:160, :])
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
